@@ -47,6 +47,7 @@ import {
   validateCatalog,
 } from "@/lib/catalog/schema";
 import { productRepository, redirectRepository } from "@/lib/catalog";
+import { isAllowedVendor } from "@/lib/catalog/vendors";
 import { blogRepository } from "@/lib/catalog/blog";
 import { shopRepository } from "@/lib/catalog/shop";
 import {
@@ -176,6 +177,14 @@ export async function fullSync(options: SyncOptions = {}): Promise<SyncStats> {
         }
       })
       .filter((product): product is CatalogProduct => product !== null)
+      // Only the Trackify vendor belong in this storefront.
+      .filter((product) => {
+        if (isAllowedVendor(product.vendor)) return true;
+        warnings.push(
+          `Skipped product ${product.handle}: vendor "${product.vendor}" not allowed`,
+        );
+        return false;
+      })
       // Products with no variants cannot be rendered or purchased.
       .filter((product) => {
         if (product.variants.length > 0) return true;
@@ -355,6 +364,8 @@ export async function syncSingleProduct(
     variables: { id: productGid },
   });
   if (!data.product) return null;
+  // Non-Trackify vendors are never imported; null makes callers drop any copy.
+  if (!isAllowedVendor(data.product.vendor)) return null;
 
   // Currency comes from the catalog the full sync already established.
   const meta = await productRepository.getCatalogMeta();
