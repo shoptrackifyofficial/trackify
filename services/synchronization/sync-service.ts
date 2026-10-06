@@ -47,7 +47,7 @@ import {
   validateCatalog,
 } from "@/lib/catalog/schema";
 import { productRepository, redirectRepository } from "@/lib/catalog";
-import { isAllowedVendor } from "@/lib/catalog/vendors";
+import { isAllowedVendor, VENDOR_SEARCH_QUERY } from "@/lib/catalog/vendors";
 import { blogRepository } from "@/lib/catalog/blog";
 import { shopRepository } from "@/lib/catalog/shop";
 import {
@@ -146,6 +146,8 @@ export async function fullSync(options: SyncOptions = {}): Promise<SyncStats> {
       "products",
       {
         pageSize: options.pageSize ?? 50,
+        // Filtered server-side by Shopify — other vendors are never fetched.
+        variables: { query: VENDOR_SEARCH_QUERY },
         onPage: (nodes, page) =>
           report(`  page ${page}: ${nodes.length} products`),
       },
@@ -177,7 +179,8 @@ export async function fullSync(options: SyncOptions = {}): Promise<SyncStats> {
         }
       })
       .filter((product): product is CatalogProduct => product !== null)
-      // Only the Trackify vendor belong in this storefront.
+      // Safety net only: the Shopify query already filters by vendor.
+      // Only the Trackify vendor belongs in this storefront.
       .filter((product) => {
         if (isAllowedVendor(product.vendor)) return true;
         warnings.push(

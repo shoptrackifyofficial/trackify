@@ -129,8 +129,8 @@ const PRODUCT_FIELDS = /* GraphQL */ `
 
 export const PRODUCTS_PAGE_QUERY = /* GraphQL */ `
   ${PRODUCT_FIELDS}
-  query ProductsPage($first: Int!, $after: String) {
-    products(first: $first, after: $after, sortKey: ID) {
+  query ProductsPage($first: Int!, $after: String, $query: String) {
+    products(first: $first, after: $after, sortKey: ID, query: $query) {
       pageInfo {
         hasNextPage
         endCursor
