@@ -18,6 +18,13 @@ import { put, get, head, del, BlobNotFoundError } from "@vercel/blob";
  * rename), and a lock file. The Blob backend gets the same in-process mutex,
  * a single atomic PUT per write (no partial state possible), and a lock blob
  * that relies on `put()` without `allowOverwrite` rejecting a second writer.
+ *
+ * PRIVATE STORAGE ONLY: every Blob call passes `access: "private"`, so reads
+ * need the read-write token and no blob URL is ever exposed to a browser. This
+ * requires the store itself to have been created with private access — writing
+ * a private blob to a public store fails at runtime. If a sync ever errors
+ * with an access/store complaint, recreate the store as private; do NOT switch
+ * these calls to `access: "public"`.
  */
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -74,7 +81,7 @@ export async function readJsonFile<T>(filePath: string): Promise<T | null> {
   if (useBlobStorage()) {
     try {
       const result = await get(blobPathname(filePath), {
-        access: "public",
+        access: "private",
         useCache: false,
       });
       if (result) {
@@ -110,7 +117,7 @@ export async function writeJsonFileAtomic(
 
   if (useBlobStorage()) {
     await put(blobPathname(filePath), serialized, {
-      access: "public",
+      access: "private",
       addRandomSuffix: false,
       allowOverwrite: true,
       contentType: "application/json",
@@ -158,7 +165,7 @@ export async function acquireLock(
           lockPathname,
           JSON.stringify({ pid: process.pid, at: Date.now() }),
           {
-            access: "public",
+            access: "private",
             addRandomSuffix: false,
           },
         );
